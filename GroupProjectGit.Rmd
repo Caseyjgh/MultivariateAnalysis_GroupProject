@@ -1,0 +1,288 @@
+---
+title: "GroupProject"
+author: "Casey Hicks"
+date: "2023-11-05"
+output:
+  html_document: 
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+ADW = Average of aggravated assaults 2005/2006
+MPD = Metro police defined disorder: MPD Calls for Service "Disorderly"
+UIdis = MPD Calls for Service: "MAN DOWN" "WOMAN DOWN" "SHOOTING" "SOUNDS OF GUNSHOTS" "INDECENT EXPOSURE" "SOLICIT PROSTITUTION / SLIP" "SOLICITING FOR PROSTITUTION" "DESTRUCTION OF PROPERTY"
+DV = Average of domestic violence calls for service
+
+
+```{r fig1, fig.height = 10, fig.width = 12, fig.align = "center"}
+
+library(dplyr)
+
+##### FUNCTIONS ######
+
+# Group data by TRACT and rename rownames by that column
+# Parameters: group_data(data-to_group, new_df_name)
+group_data <- function(data,new_df_name) {
+  sorted <- data %>%
+    group_by(TRACT) %>%
+    summarise(across(where(is.numeric), sum), .groups = "drop")
+  df <- as.data.frame(sorted)
+  rownames(df) <- df[, 1]
+  df <- df[, -1]
+  assign(new_df_name, df, envir = .GlobalEnv)
+}
+
+# Remove outliers
+remove_outliers <- function(data, outliers) {
+  data <- data[!(rownames(data) %in% outliers), ]
+}
+
+######################
+
+#Read the data:
+orig_data <- read.csv("/Users/casey.hicks/Desktop/Multivariate Analysis/Project/Data/AlcoholData.csv")
+
+# removed location ID numbers
+data <- subset(orig_data, select = -c(STATE_FIPS,TRACT,OBJECTID,BLKGRP))
+
+
+######################
+
+# Data2: All chosen group variables
+data2 <- orig_data[,c("TRACT", "VACANTPERCENT","POP2004","POP04_SQMI","MALE","YOUNGPOP","PROSOCIAL",
+                      "METRO_BG","STORE_BG","NIGHT_BG","TAVERN_BG","REST_BG",
+                      "PHYSDIS0506","AVGDV","AVGMPDDIS","AVGUIDISOR","AVGADW0506","ARR_0506")]
+
+group_data(data2, "data2")
+
+outliers <- c("5800", "4400", "5402", "5500", "202", "3800", "100")
+#remove_outliers(data2, outliers) NOT WORKING??
+
+data2 <- data2[!(rownames(data2) %in% c("5800", "4400", "5402", "5500", "202", "3800", "100")), ]
+
+
+data2.pca <- princomp(data2, cor=TRUE)               
+summary(data2.pca, loadings=TRUE) 
+
+colors_pca <- sapply(rownames(data2.pca$scores), function(rowcolors) {
+  rownum <- as.numeric(rowcolors)
+  if (rownum >= 0 && rownum <= 999) {
+    return("pink")
+  } else if (rownum >= 1000 && rownum <= 1999) {
+    return("violet")
+  } else if (rownum >= 2000 && rownum <= 2999) {
+    return("purple")
+  } else if (rownum >= 3000 && rownum <= 3999) {
+    return("blue")
+  } else if (rownum >= 4000 && rownum <= 4999) {
+    return("cyan")
+  } else if (rownum >= 5000 && rownum <= 5999) {
+    return("green")
+  } else if (rownum >= 6000 && rownum <= 6999) {
+    return("yellow")
+  } else if (rownum >= 7000 && rownum <= 7999) {
+    return("orange")
+  } else if (rownum >= 8000 && rownum <= 8999) {
+    return("red")
+  } else if (rownum >= 9000 && rownum <= 9999) {
+    return("brown")
+  } else {
+    return("gray")
+  }
+})
+
+biplot(data2.pca, col = c("black", "black"), cex = 0.5, xlim = c(-0.15, 0.3))
+text(
+  data2.pca$scores,           
+  labels = rownames(data2.pca$scores), 
+  col = colors_pca,
+  cex = 0.6,                           
+  pos = 4                              
+)
+
+
+
+colors <- sapply(rownames(data2), function(rowcolors) {
+  rownum <- as.numeric(rowcolors)
+  if (rownum >= 0 && rownum <= 999) {
+    return("pink")
+  } else if (rownum >= 1000 && rownum <= 1999) {
+    return("violet")
+  } else if (rownum >= 2000 && rownum <= 2999) {
+    return("purple")
+  } else if (rownum >= 3000 && rownum <= 3999) {
+    return("blue")
+  } else if (rownum >= 4000 && rownum <= 4999) {
+    return("cyan")
+  } else if (rownum >= 5000 && rownum <= 5999) {
+    return("green")
+  } else if (rownum >= 6000 && rownum <= 6999) {
+    return("yellow")
+  } else if (rownum >= 7000 && rownum <= 7999) {
+    return("orange")
+  } else if (rownum >= 8000 && rownum <= 8999) {
+    return("red")
+  } else if (rownum >= 9000 && rownum <= 9999) {
+    return("brown")
+  } else {
+    return("gray")
+  }
+})
+
+
+
+data2.d <- dist(scale(data2), diag=TRUE, upper=TRUE)
+cmd2 <- cmdscale(data2.d, eig=TRUE)
+
+
+plot(cmd2$points[,1:2], pch = "", main = "MDS", xlab = "MDS Points: 1", ylab = "MDS Points: 2")
+text(cmd2$points[,1:2], labels = rownames(data2), col = colors, cex = 0.6)
+
+# 
+# data2.pca$loadings
+# 
+# 
+# data3 <- orig_data[,c("TRACT","STORE_BG","NIGHT_BG","TAVERN_BG","REST_BG","AVGDV","AVGMPDDIS","AVGUIDISOR","AVGADW0506")]
+# head(data3) 
+# 
+# cor <- cor(data3)
+# 
+# 
+# d3 <- data3 %>%
+#    group_by(TRACT) %>%
+#    summarise(across(where(is.numeric), sum), .groups = "drop")
+# 
+# #data3 <- na.omit(data3)
+# data3 <- as.matrix(data3)
+# rownames(data3) <- data3[,1]
+# data3 <- (data3[,-1])
+# 
+# data3["100",]
+# 
+# data3.pca <- princomp(data3, cor=TRUE)
+# summary(data3.pca, loadings = TRUE)
+# 
+# biplot(data3.pca, col = c("black", "red"), cex =0.7)
+# 
+# data3.dist <- dist(scale(data3), diag = TRUE, upper = TRUE)
+# 
+# data3.mds <- cmdscale(data3.dist, eig=TRUE)
+# #data3.mds
+# 
+# plot(data3.mds$points, type = "n", main="MDS Analysis (Correlation Distance)", xlab="1st Component", ylab="2nd Component")
+# text(data3.mds$points, labels=rownames(data3), cex=0.7)
+# 
+
+
+
+```
+<br>
+
+#### PCA of crimes only
+```{r}
+data4 <- subset(orig_data, select =
+                  c(TRACT,PHYSDIS0506,AVGDV,AVGMPDDIS,AVGUIDISOR,AVGADW0506,ARR_0506))
+
+d4 <- data4 %>%
+   group_by(TRACT) %>%
+   summarise(across(where(is.numeric), sum), .groups = "drop")
+
+data4 <- as.matrix(d4)
+rownames(data4) <- data4[,1]
+data4 <- (data4[,-1])
+
+data4.pca <- princomp(data4, cor=TRUE)               
+summary(data4.pca, loadings=TRUE)               
+biplot(data4.pca, col = c("black", "red"), cex =0.7)
+
+
+# Cor matrix for realationship between types of crime
+# High cor between DV, UI, and ADW
+# Lower cor between physdis and violent crimes 
+cor(data4)
+
+```
+
+#### PCA crimes and alcohol establishments
+```{r fig, fig.height = 10, fig.width = 10, fig.align = "center"}
+data5 <- subset(orig_data, select =
+                  c(TRACT,PHYSDIS0506,AVGDV,AVGMPDDIS,AVGUIDISOR,AVGADW0506,ARR_0506,
+                    ON_SQMI,OFF_SQMI,REST_SQMI,TAVERN_SQMI,NIGHT_SQMI,STORE_SQMI))
+
+cor(data5)
+
+d5 <- data5 %>%
+   group_by(TRACT) %>%
+   summarise(across(where(is.numeric), sum), .groups = "drop")
+
+data5 <- as.data.frame(d5)
+rownames(data5) <- data5[,1]
+data5 <- (data5[,-1])
+
+outliers5 <- c("4002","5500", "5800", "2101")
+data5 <- data5[!(rownames(data5) %in% outliers5), ]
+### data5 is complete
+
+
+data5.pca <- princomp(data5, cor=TRUE)               
+summary(data5.pca, loadings=TRUE)               
+biplot(data5.pca, col = c("black", "red"), cex =0.7, xlim = c(-0.1,0.3))
+
+data5.d <- dist(scale(data5), diag=TRUE, upper=TRUE)
+cmd5 <- cmdscale(data5.d, eig=TRUE)
+#cumsum(cmd5$eig)/sum(cmd5$eig)
+
+
+#YOUNGPOP color filter
+d5b <- orig_data %>%
+   group_by(TRACT) %>%
+   summarise(across(where(is.numeric), sum), .groups = "drop")
+
+data5b <- as.data.frame(d5b)
+rownames(data5b) <- data5b[,"TRACT"]
+data5b <- (data5b[,-1])
+data5b <- data5b[!(rownames(data5b) %in% outliers5), ]
+
+###
+
+
+
+
+
+median5 <- median(orig_data$YOUNGPOP)
+colors5 <- ifelse(data5b$YOUNGPOP < median5, "blue", "red")
+
+plot(cmd5$points[,1:2], pch = "", main = "MDS crime vs alcohol estab.")
+text(cmd5$points[,1:2], labels = rownames(data5), col = colors5, cex = 0.6)
+
+data5.cor <- cor(data5)
+data5.cordist <- 1-data5.cor
+
+cmd5.cor <- cmdscale(data5.cordist, k = 2, eig = TRUE)
+plot(cmd5.cor$points[,1:2], pch = "", main = "MDS (Corr Dist) crime vs alcohol estab.")
+text(cmd5.cor$points[,1:2], labels = rownames(data5.cordist), cex = 0.6)
+
+```
+
+### K-Means Clustering
+```{r}
+#install.packages("tidyverse")
+#install.packages("factoextra")
+
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering algorithms & visualization
+
+
+k2 <- kmeans(data5, centers = 8, nstart = 25)
+fviz_cluster(k2, data = data5)
+
+#k2
+#aggregate(data2, by=list(cluster=k2$cluster), mean)
+
+
+
+```
