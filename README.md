@@ -1,3 +1,4 @@
 # MultivariateAnalysis_GroupProject
 
-THis is a line from RStudio
+This is a line from RStudio.  
+and another line
